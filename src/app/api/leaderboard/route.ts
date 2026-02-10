@@ -11,6 +11,7 @@ export async function GET() {
     const users = await prisma.user.findMany({
       include: {
         portfolio: { include: { holdings: true } },
+        trades: { orderBy: { createdAt: "desc" }, take: 3 },
       },
     });
 
@@ -32,13 +33,23 @@ export async function GET() {
       const isLiquidated = !!user.portfolio?.liquidatedAt;
       let holdingsValue = 0;
 
-      for (const h of user.portfolio?.holdings || []) {
-        holdingsValue += calcLeveragedValue(h.quantity, h.avgCost, prices[h.symbol] || 0, h.leverage);
-      }
+      const holdings = (user.portfolio?.holdings || []).map((h) => {
+        const currentPrice = prices[h.symbol] || 0;
+        const mv = calcLeveragedValue(h.quantity, h.avgCost, currentPrice, h.leverage);
+        holdingsValue += mv;
+        const costValue = h.quantity * h.avgCost;
+        return {
+          symbol: h.symbol,
+          leverage: h.leverage,
+          profitLossPercent: costValue > 0 ? ((mv - costValue) / costValue) * 100 : 0,
+        };
+      });
 
       const totalAssets = isLiquidated ? 0 : cash + holdingsValue;
       const profitLoss = totalAssets - initialFund;
       const profitLossPercent = (profitLoss / initialFund) * 100;
+
+      const latestWithMonologue = user.trades.find((t) => t.monologue);
 
       return {
         rank: 0,
@@ -49,8 +60,10 @@ export async function GET() {
         totalAssets,
         profitLoss,
         profitLossPercent,
-        holdingsCount: user.portfolio?.holdings.length || 0,
+        holdingsCount: holdings.length,
         isLiquidated,
+        holdings,
+        latestMonologue: latestWithMonologue?.monologue || null,
       };
     });
 

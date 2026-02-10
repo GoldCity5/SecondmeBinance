@@ -47,62 +47,87 @@ export default function LeaderboardTable() {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-gray-500 border-b border-gray-800">
-            <th className="text-left py-3 px-2">排名</th>
-            <th className="text-left py-3 px-2">AI 交易员</th>
-            <th className="text-right py-3 px-2">总资产</th>
-            <th className="text-right py-3 px-2">盈亏</th>
-            <th className="text-right py-3 px-2">收益率</th>
-            <th className="text-right py-3 px-2">持仓数</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => (
-            <tr key={entry.userId} className="border-b border-gray-800/50 hover:bg-gray-900/50">
-              <td className="py-3 px-2">
-                <span className={`font-bold ${
-                  entry.rank === 1 ? "text-yellow-400" :
-                  entry.rank === 2 ? "text-gray-300" :
-                  entry.rank === 3 ? "text-amber-600" : "text-gray-500"
-                }`}>
-                  #{entry.rank}
-                </span>
-              </td>
-              <td className="py-3 px-2">
-                <Link href={`/trader/${entry.userId}`} className="flex items-center gap-2 hover:text-emerald-400 transition-colors">
-                  {entry.avatar ? (
-                    <img src={entry.avatar} alt="" className="w-6 h-6 rounded-full" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-gray-700" />
-                  )}
-                  <span className="font-medium">{entry.name}</span>
-                  {entry.isLiquidated && (
-                    <span className="text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded">
-                      已爆仓
-                    </span>
-                  )}
-                  {!entry.isLiquidated && entry.tradingStyle && STYLE_LABELS[entry.tradingStyle] && (
-                    <span className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">
-                      {STYLE_LABELS[entry.tradingStyle].emoji} {STYLE_LABELS[entry.tradingStyle].name}
-                    </span>
-                  )}
-                </Link>
-              </td>
-              <td className="py-3 px-2 text-right font-mono">${formatMoney(entry.totalAssets)}</td>
-              <td className={`py-3 px-2 text-right font-mono ${(entry.profitLoss ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {(entry.profitLoss ?? 0) >= 0 ? "+" : ""}${formatMoney(entry.profitLoss)}
-              </td>
-              <td className={`py-3 px-2 text-right font-mono ${(entry.profitLossPercent ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {(entry.profitLossPercent ?? 0) >= 0 ? "+" : ""}{(entry.profitLossPercent ?? 0).toFixed(2)}%
-              </td>
-              <td className="py-3 px-2 text-right text-gray-400">{entry.holdingsCount}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      {entries.map((entry) => (
+        <LeaderboardCard key={entry.userId} entry={entry} />
+      ))}
     </div>
+  );
+}
+
+function LeaderboardCard({ entry }: { entry: LeaderboardEntry }) {
+  const style = STYLE_LABELS[entry.tradingStyle];
+  const plPercent = entry.profitLossPercent ?? 0;
+  const plColor = plPercent >= 0 ? "text-emerald-400" : "text-red-400";
+
+  return (
+    <Link href={`/trader/${entry.userId}`} className="block">
+      <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-4 hover:border-gray-600 transition-colors">
+        {/* 顶部：排名 + 用户信息 + 资产 */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className={`text-lg font-bold w-8 ${
+              entry.rank === 1 ? "text-yellow-400" :
+              entry.rank === 2 ? "text-gray-300" :
+              entry.rank === 3 ? "text-amber-600" : "text-gray-500"
+            }`}>
+              #{entry.rank}
+            </span>
+            {entry.avatar ? (
+              <img src={entry.avatar} alt="" className="w-8 h-8 rounded-full" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gray-700" />
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">{entry.name}</span>
+                {entry.isLiquidated && (
+                  <span className="text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded">已爆仓</span>
+                )}
+                {!entry.isLiquidated && style && (
+                  <span className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">
+                    {style.emoji} {style.name}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="font-mono font-semibold">${formatMoney(entry.totalAssets)}</p>
+            <p className={`text-xs font-mono ${plColor}`}>
+              {plPercent >= 0 ? "+" : ""}{plPercent.toFixed(2)}%
+              {" "}({(entry.profitLoss ?? 0) >= 0 ? "+" : ""}${formatMoney(entry.profitLoss)})
+            </p>
+          </div>
+        </div>
+
+        {/* 中间：持仓币种标签 */}
+        {entry.holdings.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3 ml-11">
+            {entry.holdings.map((h, i) => {
+              const hColor = h.profitLossPercent >= 0 ? "text-emerald-400" : "text-red-400";
+              return (
+                <span key={i} className="inline-flex items-center gap-1 text-xs bg-gray-800/80 px-2 py-1 rounded">
+                  <span className="text-gray-200">{h.symbol.replace("USDT", "")}</span>
+                  {h.leverage > 1 && (
+                    <span className="text-amber-400 font-bold">{h.leverage}x</span>
+                  )}
+                  <span className={`font-mono ${hColor}`}>
+                    {h.profitLossPercent >= 0 ? "+" : ""}{h.profitLossPercent.toFixed(1)}%
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 底部：最新独白 */}
+        {entry.latestMonologue && (
+          <p className="text-xs text-gray-500 italic mt-2 ml-11 truncate">
+            &ldquo;{entry.latestMonologue}&rdquo;
+          </p>
+        )}
+      </div>
+    </Link>
   );
 }

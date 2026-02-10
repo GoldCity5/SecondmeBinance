@@ -12,6 +12,12 @@ export interface CoinTicker {
   kline?: number[]; // 最近 24h K 线收盘价
 }
 
+export interface LeaderboardHolding {
+  symbol: string;
+  leverage: number;
+  profitLossPercent: number;
+}
+
 export interface LeaderboardEntry {
   rank: number;
   userId: string;
@@ -23,6 +29,8 @@ export interface LeaderboardEntry {
   profitLossPercent: number;
   holdingsCount: number;
   isLiquidated: boolean;
+  holdings: LeaderboardHolding[];
+  latestMonologue: string | null;
 }
 
 export interface HoldingInfo {
