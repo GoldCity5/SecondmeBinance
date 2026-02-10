@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         tokenExpiresAt: new Date(Date.now() + token.expiresIn * 1000),
         portfolio: {
           create: {
-            cashBalance: parseFloat(process.env.INITIAL_FUND || "100000"),
+            cashBalance: Number(process.env.INITIAL_FUND) || 100000,
           },
         },
       },
