@@ -1,25 +1,31 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCoinPrices } from "@/lib/binance";
 import { calcLeveragedValue } from "@/lib/leverage";
-import { LeaderboardEntry } from "@/types";
+import { LeaderboardEntry, PortfolioType } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const typeParam = req.nextUrl.searchParams.get("type")?.toUpperCase(); // AI | MANUAL | ALL
+  const typeFilter: { type?: string } =
+    typeParam === "MANUAL" ? { type: "MANUAL" } :
+    typeParam === "ALL" ? {} :
+    { type: "AI" }; // 默认 AI
+
   try {
-    const users = await prisma.user.findMany({
+    const portfolios = await prisma.portfolio.findMany({
+      where: typeFilter,
       include: {
-        portfolio: { include: { holdings: true } },
+        user: true,
+        holdings: true,
         trades: { orderBy: { createdAt: "desc" }, take: 3 },
       },
     });
 
     const allSymbols = new Set<string>();
-    for (const user of users) {
-      for (const h of user.portfolio?.holdings || []) {
-        allSymbols.add(h.symbol);
-      }
+    for (const p of portfolios) {
+      for (const h of p.holdings) allSymbols.add(h.symbol);
     }
 
     const prices = allSymbols.size > 0
@@ -28,12 +34,12 @@ export async function GET() {
 
     const initialFund = Number(process.env.INITIAL_FUND) || 100000;
 
-    const entries: LeaderboardEntry[] = users.map((user) => {
-      const cash = user.portfolio?.cashBalance || 0;
-      const isLiquidated = !!user.portfolio?.liquidatedAt;
+    const entries: LeaderboardEntry[] = portfolios.map((p) => {
+      const cash = p.cashBalance;
+      const isLiquidated = !!p.liquidatedAt;
       let holdingsValue = 0;
 
-      const holdings = (user.portfolio?.holdings || []).map((h) => {
+      const holdings = p.holdings.map((h) => {
         const currentPrice = prices[h.symbol] || 0;
         const mv = calcLeveragedValue(h.quantity, h.avgCost, currentPrice, h.leverage);
         holdingsValue += mv;
@@ -49,22 +55,23 @@ export async function GET() {
       const profitLoss = totalAssets - initialFund;
       const profitLossPercent = (profitLoss / initialFund) * 100;
 
-      const latestWithMonologue = user.trades.find((t) => t.monologue);
+      const latestWithMonologue = p.trades.find((t) => t.monologue);
 
       return {
         rank: 0,
-        userId: user.id,
-        name: user.name,
-        avatar: user.avatar,
-        tradingStyle: user.tradingStyle || "",
-        customPersona: user.customPersona || "",
+        userId: p.userId,
+        name: p.user.name,
+        avatar: p.user.avatar,
+        tradingStyle: p.type === "AI" ? (p.user.tradingStyle || "") : "",
+        customPersona: p.type === "AI" ? (p.user.customPersona || "") : "",
         totalAssets,
         profitLoss,
         profitLossPercent,
         holdingsCount: holdings.length,
         isLiquidated,
         holdings,
-        latestMonologue: latestWithMonologue?.monologue || null,
+        latestMonologue: p.type === "AI" ? (latestWithMonologue?.monologue || null) : null,
+        type: p.type as PortfolioType,
       };
     });
 

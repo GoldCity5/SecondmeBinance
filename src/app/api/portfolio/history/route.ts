@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { SnapshotPeriod } from "@/types";
+import { PortfolioType, SnapshotPeriod } from "@/types";
 
 const INITIAL_CAPITAL = 100000;
 
@@ -23,13 +23,14 @@ function getStartDate(period: SnapshotPeriod): Date | null {
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
   const period = (req.nextUrl.searchParams.get("period") || "1W") as SnapshotPeriod;
+  const type = (req.nextUrl.searchParams.get("type")?.toUpperCase() || "AI") as PortfolioType;
 
   if (!userId) {
     return NextResponse.json({ code: -1, message: "缺少 userId" }, { status: 400 });
   }
 
   const portfolio = await prisma.portfolio.findUnique({
-    where: { userId },
+    where: { userId_type: { userId, type } },
   });
 
   if (!portfolio) {

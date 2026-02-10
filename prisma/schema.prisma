@@ -10,32 +10,36 @@ datasource db {
 }
 
 model User {
-  id              String     @id @default(cuid())
-  secondmeUserId  String     @unique
+  id              String      @id @default(cuid())
+  secondmeUserId  String      @unique
   name            String
   email           String?
   avatar          String?
-  bio             String     @default("")
-  tradingStyle    String     @default("")
-  customPersona   String     @default("")
+  bio             String      @default("")
+  tradingStyle    String      @default("")
+  customPersona   String      @default("")
   accessToken     String
   refreshToken    String
   tokenExpiresAt  DateTime
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  portfolio       Portfolio?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  portfolios      Portfolio[]
   trades          Trade[]
 }
 
 model Portfolio {
   id            String              @id @default(cuid())
-  userId        String              @unique
+  userId        String
+  type          String              @default("AI") // "AI" | "MANUAL"
   user          User                @relation(fields: [userId], references: [id])
   cashBalance   Float               @default(100000)
   liquidatedAt  DateTime?
   holdings      Holding[]
   snapshots     PortfolioSnapshot[]
+  trades        Trade[]
   updatedAt     DateTime            @updatedAt
+
+  @@unique([userId, type])
 }
 
 model Holding {
@@ -52,18 +56,20 @@ model Holding {
 }
 
 model Trade {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  symbol    String
-  side      String
-  quantity  Float
-  price     Float
-  total     Float
-  leverage  Int      @default(1)
-  reason    String
-  monologue String   @default("")
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
+  symbol      String
+  side        String
+  quantity    Float
+  price       Float
+  total       Float
+  leverage    Int       @default(1)
+  reason      String
+  monologue   String    @default("")
+  createdAt   DateTime  @default(now())
 }
 
 model PortfolioSnapshot {

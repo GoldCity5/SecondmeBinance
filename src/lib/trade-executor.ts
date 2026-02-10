@@ -73,6 +73,7 @@ async function executeBuy(
     prisma.trade.create({
       data: {
         userId,
+        portfolioId: portfolio.id,
         symbol: decision.symbol,
         side: "BUY",
         quantity,
@@ -134,6 +135,7 @@ async function executeSell(
     prisma.trade.create({
       data: {
         userId,
+        portfolioId: portfolio.id,
         symbol: decision.symbol,
         side: "SELL",
         quantity: totalSellQty,

@@ -32,9 +32,10 @@ function formatDate(d: string): string {
 
 interface Props {
   userId: string;
+  type?: string;
 }
 
-export default function EquityCurve({ userId }: Props) {
+export default function EquityCurve({ userId, type }: Props) {
   const [period, setPeriod] = useState<SnapshotPeriod>("1W");
   const [data, setData] = useState<SnapshotPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +43,7 @@ export default function EquityCurve({ userId }: Props) {
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch(
-        `/api/portfolio/history?userId=${userId}&period=${period}`
+        `/api/portfolio/history?userId=${userId}&period=${period}&type=${type || "AI"}`
       );
       const json = await res.json();
       if (json.code === 0) setData(json.data);
@@ -51,7 +52,7 @@ export default function EquityCurve({ userId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [userId, period]);
+  }, [userId, period, type]);
 
   useEffect(() => {
     setLoading(true);

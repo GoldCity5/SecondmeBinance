@@ -3,35 +3,17 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCoinPrices } from "@/lib/binance";
 import { calcLeveragedValue } from "@/lib/leverage";
-import { HoldingInfo } from "@/types";
-import PortfolioChart from "@/components/trader/PortfolioChart";
-import TradeHistory from "@/components/trader/TradeHistory";
-import EquityCurve from "@/components/trader/EquityCurve";
-import AiMonologue from "@/components/trader/AiMonologue";
+import { HoldingInfo, TradeRecord } from "@/types";
+import DashboardTabs from "@/components/dashboard/DashboardTabs";
 import AutoRefresh from "@/components/common/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const session = await getSession();
-  if (!session) redirect("/login");
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    include: {
-      portfolio: { include: { holdings: true } },
-      trades: { orderBy: { createdAt: "desc" }, take: 50 },
-    },
-  });
-
-  if (!user || !user.portfolio) redirect("/login");
-
-  const symbols = [...new Set(user.portfolio.holdings.map((h) => h.symbol))];
-  const prices = symbols.length > 0 ? await getCoinPrices(symbols) : {};
-
-  const isLiquidated = !!user.portfolio.liquidatedAt;
-
-  const holdings: HoldingInfo[] = user.portfolio.holdings.map((h) => {
+function buildHoldings(
+  rawHoldings: { symbol: string; quantity: number; avgCost: number; leverage: number }[],
+  prices: Record<string, number>
+): HoldingInfo[] {
+  return rawHoldings.map((h) => {
     const currentPrice = prices[h.symbol] || 0;
     const marketValue = calcLeveragedValue(h.quantity, h.avgCost, currentPrice, h.leverage);
     const costValue = h.quantity * h.avgCost;
@@ -46,23 +28,12 @@ export default async function DashboardPage() {
       leverage: h.leverage,
     };
   });
+}
 
-  const holdingsValue = holdings.reduce((sum, h) => sum + h.marketValue, 0);
-  const totalAssets = isLiquidated ? 0 : user.portfolio.cashBalance + holdingsValue;
-  const profitLoss = totalAssets - 100000;
-
-  // 取最新一轮交易的所有独白（同一轮交易时间间隔 < 60 秒）
-  const latestWithMonologue = user.trades.find((t) => t.monologue);
-  const latestBatchMonologues = (() => {
-    if (!latestWithMonologue) return [];
-    const batchTime = latestWithMonologue.createdAt.getTime();
-    return user.trades
-      .filter((t) => t.monologue && Math.abs(t.createdAt.getTime() - batchTime) < 60000)
-      .reverse()
-      .map((t) => ({ symbol: t.symbol, side: t.side, monologue: t.monologue }));
-  })();
-
-  const trades = user.trades.map((t) => ({
+function buildTrades(
+  rawTrades: { id: string; symbol: string; side: string; quantity: number; price: number; total: number; leverage: number; reason: string; monologue: string; createdAt: Date }[]
+): TradeRecord[] {
+  return rawTrades.map((t) => ({
     id: t.id,
     symbol: t.symbol,
     side: t.side as "BUY" | "SELL",
@@ -74,49 +45,88 @@ export default async function DashboardPage() {
     monologue: t.monologue,
     createdAt: t.createdAt.toISOString(),
   }));
+}
+
+export default async function DashboardPage() {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    include: {
+      portfolios: {
+        include: { holdings: true, trades: { orderBy: { createdAt: "desc" }, take: 50 } },
+      },
+    },
+  });
+
+  if (!user) redirect("/login");
+
+  const aiPortfolio = user.portfolios.find((p) => p.type === "AI");
+  const manualPortfolio = user.portfolios.find((p) => p.type === "MANUAL");
+
+  if (!aiPortfolio) redirect("/login");
+
+  // 收集所有持仓的 symbol
+  const allSymbols = new Set<string>();
+  for (const p of user.portfolios) {
+    for (const h of p.holdings) allSymbols.add(h.symbol);
+  }
+  const prices = allSymbols.size > 0 ? await getCoinPrices([...allSymbols]) : {};
+
+  // AI 数据
+  const aiHoldings = buildHoldings(aiPortfolio.holdings, prices);
+  const aiHoldingsValue = aiHoldings.reduce((sum, h) => sum + h.marketValue, 0);
+  const aiTotalAssets = aiPortfolio.liquidatedAt ? 0 : aiPortfolio.cashBalance + aiHoldingsValue;
+
+  const latestWithMonologue = aiPortfolio.trades.find((t) => t.monologue);
+  const latestBatchMonologues = (() => {
+    if (!latestWithMonologue) return [];
+    const batchTime = latestWithMonologue.createdAt.getTime();
+    return aiPortfolio.trades
+      .filter((t) => t.monologue && Math.abs(t.createdAt.getTime() - batchTime) < 60000)
+      .reverse()
+      .map((t) => ({ symbol: t.symbol, side: t.side, monologue: t.monologue }));
+  })();
+
+  // 真人数据
+  const manualHoldings = manualPortfolio ? buildHoldings(manualPortfolio.holdings, prices) : [];
+  const manualHoldingsValue = manualHoldings.reduce((sum, h) => sum + h.marketValue, 0);
+  const manualTotalAssets = manualPortfolio
+    ? (manualPortfolio.liquidatedAt ? 0 : manualPortfolio.cashBalance + manualHoldingsValue)
+    : 0;
 
   return (
     <div>
       <AutoRefresh interval={30000} />
       <h1 className="text-2xl font-bold mb-6">
-        {user.name} 的 AI 交易面板
+        {user.name} 的交易面板
       </h1>
 
-      {isLiquidated && (
-        <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 mb-4 text-center">
-          <p className="text-red-400 font-bold text-lg">已爆仓</p>
-          <p className="text-red-400/70 text-sm mt-1">你的 AI 交易员因杠杆亏损过大，总资产已归零</p>
-        </div>
-      )}
-
-      <AiMonologue
-        tradingStyle={user.tradingStyle}
-        customPersona={user.customPersona}
-        monologues={latestBatchMonologues}
-        monologueTime={latestWithMonologue?.createdAt.toISOString() || null}
-        editable
+      <DashboardTabs
+        userId={session.userId}
+        aiData={{
+          tradingStyle: user.tradingStyle,
+          customPersona: user.customPersona,
+          monologues: latestBatchMonologues,
+          monologueTime: latestWithMonologue?.createdAt.toISOString() || null,
+          cashBalance: aiPortfolio.cashBalance,
+          holdings: aiHoldings,
+          totalAssets: aiTotalAssets,
+          profitLoss: aiTotalAssets - (Number(process.env.INITIAL_FUND) || 100000),
+          isLiquidated: !!aiPortfolio.liquidatedAt,
+          trades: buildTrades(aiPortfolio.trades),
+        }}
+        manualData={{
+          exists: !!manualPortfolio,
+          cashBalance: manualPortfolio?.cashBalance || 0,
+          holdings: manualHoldings,
+          totalAssets: manualTotalAssets,
+          profitLoss: manualTotalAssets - (Number(process.env.INITIAL_FUND) || 100000),
+          isLiquidated: !!manualPortfolio?.liquidatedAt,
+          trades: manualPortfolio ? buildTrades(manualPortfolio.trades) : [],
+        }}
       />
-
-      <div className="mt-6">
-        <EquityCurve userId={session.userId} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 className="text-lg font-semibold mb-4">持仓概览</h2>
-          <PortfolioChart
-            cashBalance={user.portfolio.cashBalance}
-            holdings={holdings}
-            totalAssets={totalAssets}
-            profitLoss={profitLoss}
-          />
-        </div>
-
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 className="text-lg font-semibold mb-4">最近交易</h2>
-          <TradeHistory trades={trades} />
-        </div>
-      </div>
     </div>
   );
 }

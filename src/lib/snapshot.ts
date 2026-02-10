@@ -12,11 +12,11 @@ function getTodayDate(): string {
  * 同一天多次调用只保留最新值（upsert）
  */
 export async function createSnapshotForUser(
-  userId: string,
+  portfolioId: string,
   prices: Record<string, number>
 ): Promise<void> {
   const portfolio = await prisma.portfolio.findUnique({
-    where: { userId },
+    where: { id: portfolioId },
     include: { holdings: true },
   });
   if (!portfolio) return;

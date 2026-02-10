@@ -2,34 +2,44 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCoinPrices } from "@/lib/binance";
 import { calcLeveragedValue } from "@/lib/leverage";
+import { PortfolioType } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const type = (request.nextUrl.searchParams.get("type")?.toUpperCase() || "AI") as PortfolioType;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      include: {
-        portfolio: { include: { holdings: true } },
-        trades: { orderBy: { createdAt: "desc" }, take: 100 },
-      },
-    });
-
+    const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
       return NextResponse.json({ code: 404, message: "用户不存在" }, { status: 404 });
     }
 
-    const symbols = [...new Set(user.portfolio?.holdings.map((h) => h.symbol) || [])];
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { userId_type: { userId: id, type } },
+      include: { holdings: true },
+    });
+
+    if (!portfolio) {
+      return NextResponse.json({ code: 404, message: "投资组合不存在" }, { status: 404 });
+    }
+
+    const trades = await prisma.trade.findMany({
+      where: { portfolioId: portfolio.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+
+    const symbols = [...new Set(portfolio.holdings.map((h) => h.symbol))];
     const prices = symbols.length > 0 ? await getCoinPrices(symbols) : {};
 
-    const isLiquidated = !!user.portfolio?.liquidatedAt;
+    const isLiquidated = !!portfolio.liquidatedAt;
 
-    const holdings = (user.portfolio?.holdings || []).map((h) => {
+    const holdings = portfolio.holdings.map((h) => {
       const currentPrice = prices[h.symbol] || 0;
       const marketValue = calcLeveragedValue(h.quantity, h.avgCost, currentPrice, h.leverage);
       const costValue = h.quantity * h.avgCost;
@@ -46,7 +56,7 @@ export async function GET(
     });
 
     const holdingsValue = holdings.reduce((sum, h) => sum + h.marketValue, 0);
-    const cashBalance = user.portfolio?.cashBalance || 0;
+    const cashBalance = portfolio.cashBalance;
     const totalAssets = isLiquidated ? 0 : cashBalance + holdingsValue;
 
     return NextResponse.json({
@@ -54,13 +64,14 @@ export async function GET(
       data: {
         name: user.name,
         avatar: user.avatar,
-        tradingStyle: user.tradingStyle || "",
+        tradingStyle: type === "AI" ? (user.tradingStyle || "") : "",
+        type,
         isLiquidated,
         cashBalance,
         totalAssets,
-        profitLoss: totalAssets - 100000,
+        profitLoss: totalAssets - (Number(process.env.INITIAL_FUND) || 100000),
         holdings,
-        trades: user.trades.map((t) => ({
+        trades: trades.map((t) => ({
           id: t.id,
           symbol: t.symbol,
           side: t.side,

@@ -40,15 +40,21 @@ async function parallelLimit<T>(tasks: (() => Promise<T>)[], limit: number): Pro
 export async function executeTradeForUser(userId: string, sharedCoins?: CoinTicker[]): Promise<TradeResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { portfolio: { include: { holdings: true } } },
+    include: {
+      portfolios: {
+        where: { type: "AI" },
+        include: { holdings: true },
+      },
+    },
   });
 
-  if (!user || !user.portfolio) {
+  const portfolio = user?.portfolios[0];
+  if (!user || !portfolio) {
     return { userId, userName: "unknown", status: "error", decisions: [], executedTrades: 0, error: "用户或投资组合不存在" };
   }
 
   // 已爆仓用户跳过交易
-  if (user.portfolio.liquidatedAt) {
+  if (portfolio.liquidatedAt) {
     console.log(`[交易] 用户 ${user.name}: 已爆仓，跳过`);
     return { userId, userName: user.name, status: "liquidated", decisions: [], executedTrades: 0 };
   }
@@ -101,7 +107,7 @@ export async function executeTradeForUser(userId: string, sharedCoins?: CoinTick
     stylePersona = getStyleById(user.tradingStyle)?.promptPersona;
   }
 
-  const holdingsInfo = user.portfolio.holdings
+  const holdingsInfo = portfolio.holdings
     .map((h) => {
       const lev = h.leverage > 1 ? ` (${h.leverage}x杠杆)` : "";
       return `${h.symbol}: 持有 ${h.quantity} 个, 均价 $${h.avgCost.toFixed(2)}${lev}`;
@@ -109,7 +115,7 @@ export async function executeTradeForUser(userId: string, sharedCoins?: CoinTick
     .join("; ");
 
   const marketSummary = `当前时间: ${new Date().toISOString()}
-可用现金: $${user.portfolio.cashBalance.toFixed(2)}
+可用现金: $${portfolio.cashBalance.toFixed(2)}
 当前持仓: ${holdingsInfo || "无"}
 市场行情:
 ${coins.map((c) => `${c.name}: $${c.price} (24h ${c.priceChangePercent >= 0 ? "+" : ""}${c.priceChangePercent.toFixed(2)}%, 成交额 $${(c.quoteVolume / 1e6).toFixed(0)}M)`).join("\n")}`;
@@ -134,7 +140,7 @@ ${coins.map((c) => `${c.name}: $${c.price} (24h ${c.priceChangePercent >= 0 ? "+
       continue;
     }
     try {
-      await executeSingleTrade(user.id, user.portfolio.id, decision);
+      await executeSingleTrade(user.id, portfolio.id, decision);
       result.executedTrades++;
       result.status = "success";
       console.log(`[交易] 用户 ${user.name}: ${decision.action} ${decision.symbol} 成功`);
@@ -152,7 +158,7 @@ ${coins.map((c) => `${c.name}: $${c.price} (24h ${c.priceChangePercent >= 0 ? "+
   if (result.executedTrades > 0) {
     const prices: Record<string, number> = {};
     for (const c of coins) prices[c.symbol] = c.price;
-    const liquidated = await checkAndLiquidate(user.portfolio.id, prices);
+    const liquidated = await checkAndLiquidate(portfolio.id, prices);
     if (liquidated) {
       console.log(`[交易] 用户 ${user.name}: 交易后触发爆仓！`);
       result.status = "liquidated";

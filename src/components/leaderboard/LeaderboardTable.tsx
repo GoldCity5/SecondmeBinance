@@ -11,57 +11,83 @@ const STYLE_LABELS: Record<string, { emoji: string; name: string }> = {
   "contrarian": { emoji: "\uD83D\uDD04", name: "反向指标" },
 };
 
+type TabType = "ai" | "manual" | "all";
+const TABS: { label: string; value: TabType }[] = [
+  { label: "AI 交易员", value: "ai" },
+  { label: "真人交易", value: "manual" },
+  { label: "全部", value: "all" },
+];
+
 function formatMoney(n: number | null | undefined): string {
   return (n ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function LeaderboardTable() {
+  const [activeTab, setActiveTab] = useState<TabType>("ai");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchData() {
       try {
-        const res = await fetch("/api/leaderboard");
+        const res = await fetch(`/api/leaderboard?type=${activeTab}`);
         const json = await res.json();
-        if (json.code === 0) setEntries(json.data);
+        if (!cancelled && json.code === 0) setEntries(json.data);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
+    setLoading(true);
     fetchData();
     const timer = setInterval(fetchData, 30000);
-    return () => clearInterval(timer);
-  }, []);
-
-  if (loading) {
-    return <div className="text-gray-500 text-center py-12">加载排行榜...</div>;
-  }
-
-  if (entries.length === 0) {
-    return (
-      <div className="text-gray-500 text-center py-12">
-        暂无参赛者，快来登录参与吧！
-      </div>
-    );
-  }
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [activeTab]);
 
   return (
-    <div className="space-y-3">
-      {entries.map((entry) => (
-        <LeaderboardCard key={entry.userId} entry={entry} />
-      ))}
+    <div>
+      {/* Tab 切换 */}
+      <div className="flex gap-2 mb-4">
+        {TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === tab.value
+                ? "bg-cyan-600 text-white"
+                : "bg-gray-800 text-gray-400 hover:text-white"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="text-gray-500 text-center py-12">加载排行榜...</div>
+      ) : entries.length === 0 ? (
+        <div className="text-gray-500 text-center py-12">
+          暂无参赛者，快来登录参与吧！
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {entries.map((entry, idx) => (
+            <LeaderboardCard key={`${entry.userId}-${entry.type}-${idx}`} entry={entry} showTypeTag={activeTab === "all"} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function LeaderboardCard({ entry }: { entry: LeaderboardEntry }) {
+function LeaderboardCard({ entry, showTypeTag }: { entry: LeaderboardEntry; showTypeTag: boolean }) {
   const style = STYLE_LABELS[entry.tradingStyle];
   const plPercent = entry.profitLossPercent ?? 0;
   const plColor = plPercent >= 0 ? "text-emerald-400" : "text-red-400";
+  const typeParam = entry.type === "MANUAL" ? "?type=MANUAL" : "";
 
   return (
-    <Link href={`/trader/${entry.userId}`} className="block">
+    <Link href={`/trader/${entry.userId}${typeParam}`} className="block">
       <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-4 hover:border-gray-600 transition-colors">
         {/* 顶部：排名 + 用户信息 + 资产 */}
         <div className="flex items-center justify-between">
@@ -81,14 +107,23 @@ function LeaderboardCard({ entry }: { entry: LeaderboardEntry }) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold">{entry.name}</span>
+                {showTypeTag && (
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${
+                    entry.type === "AI"
+                      ? "bg-blue-900/40 text-blue-400"
+                      : "bg-purple-900/40 text-purple-400"
+                  }`}>
+                    {entry.type === "AI" ? "AI" : "真人"}
+                  </span>
+                )}
                 {entry.isLiquidated && (
                   <span className="text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded">已爆仓</span>
                 )}
-                {!entry.isLiquidated && entry.customPersona ? (
+                {entry.type === "AI" && !entry.isLiquidated && entry.customPersona ? (
                   <span className="text-xs bg-cyan-900/40 text-cyan-400 px-1.5 py-0.5 rounded">
                     {"\uD83C\uDFAD"} 自定义人设
                   </span>
-                ) : !entry.isLiquidated && style && (
+                ) : entry.type === "AI" && !entry.isLiquidated && style && (
                   <span className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">
                     {style.emoji} {style.name}
                   </span>
@@ -125,8 +160,8 @@ function LeaderboardCard({ entry }: { entry: LeaderboardEntry }) {
           </div>
         )}
 
-        {/* 底部：最新独白 */}
-        {entry.latestMonologue && (
+        {/* 底部：最新独白（仅 AI） */}
+        {entry.type === "AI" && entry.latestMonologue && (
           <p className="text-xs text-gray-500 italic mt-2 ml-11 truncate">
             &ldquo;{entry.latestMonologue}&rdquo;
           </p>

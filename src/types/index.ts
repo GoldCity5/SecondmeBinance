@@ -1,3 +1,14 @@
+// Portfolio 类型
+export type PortfolioType = "AI" | "MANUAL";
+
+// 真人交易请求
+export interface ManualTradeRequest {
+  symbol: string;
+  action: "BUY" | "SELL";
+  percentage: number; // 1-100
+  leverage?: number;  // 1-10
+}
+
 // Binance 行情数据
 export interface CoinTicker {
   symbol: string;
@@ -32,6 +43,7 @@ export interface LeaderboardEntry {
   isLiquidated: boolean;
   holdings: LeaderboardHolding[];
   latestMonologue: string | null;
+  type: PortfolioType;
 }
 
 export interface HoldingInfo {

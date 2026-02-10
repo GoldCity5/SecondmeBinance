@@ -46,8 +46,9 @@ export async function GET(request: NextRequest) {
         accessToken: token.accessToken,
         refreshToken: token.refreshToken,
         tokenExpiresAt: new Date(Date.now() + token.expiresIn * 1000),
-        portfolio: {
+        portfolios: {
           create: {
+            type: "AI",
             cashBalance: Number(process.env.INITIAL_FUND) || 100000,
           },
         },
