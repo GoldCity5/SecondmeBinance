@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { exchangeCodeForToken, getUserInfo } from "@/lib/secondme";
 import { createSession, setSessionCookie } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { executeTradeForUser } from "@/lib/trading";
+
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
@@ -58,12 +61,17 @@ export async function GET(request: NextRequest) {
     });
     await setSessionCookie(jwt);
 
-    // 新用户注册后异步触发首次交易（不阻塞登录跳转）
+    // 新用户注册后触发首次交易（after 确保 redirect 后函数继续执行）
     if (isNewUser) {
-      console.log(`[注册] 新用户 ${user.name}，触发首次交易...`);
-      executeTradeForUser(user.id)
-        .then((r) => console.log(`[注册] ${user.name} 首次交易完成:`, JSON.stringify(r)))
-        .catch((e) => console.error(`[注册] ${user.name} 首次交易失败:`, e));
+      after(async () => {
+        console.log(`[注册] 新用户 ${user.name}，触发首次交易...`);
+        try {
+          const r = await executeTradeForUser(user.id);
+          console.log(`[注册] ${user.name} 首次交易完成:`, JSON.stringify(r));
+        } catch (e) {
+          console.error(`[注册] ${user.name} 首次交易失败:`, e);
+        }
+      });
     }
 
     return NextResponse.redirect(`${appUrl}/dashboard`);
