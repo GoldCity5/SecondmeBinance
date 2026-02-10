@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ code: 404, message: "用户不存在" }, { status: 404 });
     }
 
-    const symbols = user.portfolio?.holdings.map((h) => h.symbol) || [];
+    const symbols = [...new Set(user.portfolio?.holdings.map((h) => h.symbol) || [])];
     const prices = symbols.length > 0 ? await getCoinPrices(symbols) : {};
 
     const isLiquidated = !!user.portfolio?.liquidatedAt;

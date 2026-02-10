@@ -28,7 +28,7 @@ export default async function TraderPage({ params }: Props) {
 
   if (!user || !user.portfolio) notFound();
 
-  const symbols = user.portfolio.holdings.map((h) => h.symbol);
+  const symbols = [...new Set(user.portfolio.holdings.map((h) => h.symbol))];
   const prices = symbols.length > 0 ? await getCoinPrices(symbols) : {};
 
   const isLiquidated = !!user.portfolio.liquidatedAt;
