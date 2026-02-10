@@ -84,7 +84,11 @@ function LeaderboardCard({ entry }: { entry: LeaderboardEntry }) {
                 {entry.isLiquidated && (
                   <span className="text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded">已爆仓</span>
                 )}
-                {!entry.isLiquidated && style && (
+                {!entry.isLiquidated && entry.customPersona ? (
+                  <span className="text-xs bg-cyan-900/40 text-cyan-400 px-1.5 py-0.5 rounded">
+                    {"\uD83C\uDFAD"} 自定义人设
+                  </span>
+                ) : !entry.isLiquidated && style && (
                   <span className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">
                     {style.emoji} {style.name}
                   </span>

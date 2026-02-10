@@ -57,6 +57,7 @@ export async function GET() {
         name: user.name,
         avatar: user.avatar,
         tradingStyle: user.tradingStyle || "",
+        customPersona: user.customPersona || "",
         totalAssets,
         profitLoss,
         profitLossPercent,

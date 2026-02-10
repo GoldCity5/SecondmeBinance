@@ -24,6 +24,7 @@ export interface LeaderboardEntry {
   name: string;
   avatar: string | null;
   tradingStyle: string;
+  customPersona: string;
   totalAssets: number;
   profitLoss: number;
   profitLossPercent: number;
