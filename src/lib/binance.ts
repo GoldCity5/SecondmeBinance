@@ -1,6 +1,6 @@
 import { CoinTicker } from "@/types";
 
-const BASE_URL = process.env.BINANCE_API_BASE || "https://api.binance.com";
+const BASE_URL = process.env.BINANCE_API_BASE || "https://data-api.binance.vision";
 
 const TOP_SYMBOLS = [
   "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
@@ -64,4 +64,30 @@ export async function getCoinPrices(
     prices[item.symbol] = parseFloat(item.price);
   }
   return prices;
+}
+
+// K 线数据 (最近 24 根 1 小时 K 线)
+export async function getKlines(symbol: string): Promise<number[]> {
+  const url = `${BASE_URL}/api/v3/klines?symbol=${symbol}&interval=1h&limit=24`;
+  const res = await fetch(url, { next: { revalidate: 60 } });
+  if (!res.ok) throw new Error(`Binance klines error: ${res.status}`);
+  const data: unknown[][] = await res.json();
+  // 每根 K 线的第 4 个字段是收盘价
+  return data.map((k) => parseFloat(k[4] as string));
+}
+
+// 批量获取所有币种 K 线
+export async function getAllKlines(
+  symbols: string[]
+): Promise<Record<string, number[]>> {
+  const results = await Promise.allSettled(
+    symbols.map(async (s) => ({ symbol: s, data: await getKlines(s) }))
+  );
+  const klines: Record<string, number[]> = {};
+  for (const r of results) {
+    if (r.status === "fulfilled") {
+      klines[r.value.symbol] = r.value.data;
+    }
+  }
+  return klines;
 }

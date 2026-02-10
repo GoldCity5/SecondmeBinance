@@ -9,6 +9,7 @@ export interface CoinTicker {
   low24h: number;
   volume: number;
   quoteVolume: number;
+  kline?: number[]; // 最近 24h K 线收盘价
 }
 
 export interface LeaderboardEntry {
