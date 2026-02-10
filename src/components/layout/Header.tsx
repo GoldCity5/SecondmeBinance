@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
+import UserNav from "./UserNav";
 
 export default async function Header() {
   const session = await getSession();
@@ -19,9 +20,7 @@ export default async function Header() {
             行情
           </Link>
           {session ? (
-            <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors">
-              {session.name}
-            </Link>
+            <UserNav name={session.name} />
           ) : (
             <Link
               href="/login"
