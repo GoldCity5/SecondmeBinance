@@ -54,6 +54,14 @@ export default async function TraderPage({ params }: Props) {
   const profitLoss = totalAssets - 100000;
 
   const latestWithMonologue = user.trades.find((t) => t.monologue);
+  const latestBatchMonologues = (() => {
+    if (!latestWithMonologue) return [];
+    const batchTime = latestWithMonologue.createdAt.getTime();
+    return user.trades
+      .filter((t) => t.monologue && Math.abs(t.createdAt.getTime() - batchTime) < 60000)
+      .reverse()
+      .map((t) => ({ symbol: t.symbol, side: t.side, monologue: t.monologue }));
+  })();
 
   const trades = user.trades.map((t) => ({
     id: t.id,
@@ -90,7 +98,7 @@ export default async function TraderPage({ params }: Props) {
       <AiMonologue
         tradingStyle={user.tradingStyle}
         customPersona={user.customPersona}
-        monologue={latestWithMonologue?.monologue || null}
+        monologues={latestBatchMonologues}
         monologueTime={latestWithMonologue?.createdAt.toISOString() || null}
       />
 

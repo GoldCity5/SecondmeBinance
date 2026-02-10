@@ -10,10 +10,16 @@ const STYLE_INFO: Record<string, { name: string; emoji: string }> = {
   "contrarian": { name: "反向指标", emoji: "\uD83D\uDD04" },
 };
 
+export interface MonologueItem {
+  symbol: string;
+  side: string;
+  monologue: string;
+}
+
 interface Props {
   tradingStyle: string;
   customPersona: string;
-  monologue: string | null;
+  monologues: MonologueItem[];
   monologueTime: string | null;
   editable?: boolean;
 }
@@ -28,7 +34,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hours / 24)}天前`;
 }
 
-export default function AiMonologue({ tradingStyle, customPersona: initCustom, monologue, monologueTime, editable }: Props) {
+export default function AiMonologue({ tradingStyle, customPersona: initCustom, monologues, monologueTime, editable }: Props) {
   const [style, setStyle] = useState(tradingStyle);
   const [custom, setCustom] = useState(initCustom);
   const isCustom = custom.length > 0;
@@ -71,13 +77,22 @@ export default function AiMonologue({ tradingStyle, customPersona: initCustom, m
         </p>
       )}
 
-      {monologue ? (
-        <div>
-          <p className="text-gray-200 text-lg italic leading-relaxed">
-            &ldquo;{monologue}&rdquo;
-          </p>
+      {monologues.length > 0 ? (
+        <div className="space-y-2">
+          {monologues.map((m, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span className={`text-xs font-bold px-1.5 py-0.5 rounded mt-1 shrink-0 ${
+                m.side === "BUY" ? "bg-emerald-900/50 text-emerald-400" : "bg-red-900/50 text-red-400"
+              }`}>
+                {m.symbol.replace("USDT", "")}
+              </span>
+              <p className="text-gray-200 italic leading-relaxed">
+                &ldquo;{m.monologue}&rdquo;
+              </p>
+            </div>
+          ))}
           {monologueTime && (
-            <p className="text-xs text-gray-500 text-right mt-2">
+            <p className="text-xs text-gray-500 text-right mt-1">
               — {timeAgo(monologueTime)}
             </p>
           )}

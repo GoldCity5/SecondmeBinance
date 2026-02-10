@@ -51,8 +51,16 @@ export default async function DashboardPage() {
   const totalAssets = isLiquidated ? 0 : user.portfolio.cashBalance + holdingsValue;
   const profitLoss = totalAssets - 100000;
 
-  // 取最新一条有独白的交易
+  // 取最新一轮交易的所有独白（同一轮交易时间间隔 < 60 秒）
   const latestWithMonologue = user.trades.find((t) => t.monologue);
+  const latestBatchMonologues = (() => {
+    if (!latestWithMonologue) return [];
+    const batchTime = latestWithMonologue.createdAt.getTime();
+    return user.trades
+      .filter((t) => t.monologue && Math.abs(t.createdAt.getTime() - batchTime) < 60000)
+      .reverse()
+      .map((t) => ({ symbol: t.symbol, side: t.side, monologue: t.monologue }));
+  })();
 
   const trades = user.trades.map((t) => ({
     id: t.id,
@@ -84,7 +92,7 @@ export default async function DashboardPage() {
       <AiMonologue
         tradingStyle={user.tradingStyle}
         customPersona={user.customPersona}
-        monologue={latestWithMonologue?.monologue || null}
+        monologues={latestBatchMonologues}
         monologueTime={latestWithMonologue?.createdAt.toISOString() || null}
         editable
       />
