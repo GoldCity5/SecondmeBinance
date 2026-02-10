@@ -26,12 +26,13 @@ model User {
 }
 
 model Portfolio {
-  id            String    @id @default(cuid())
-  userId        String    @unique
-  user          User      @relation(fields: [userId], references: [id])
-  cashBalance   Float     @default(100000)
+  id            String              @id @default(cuid())
+  userId        String              @unique
+  user          User                @relation(fields: [userId], references: [id])
+  cashBalance   Float               @default(100000)
   holdings      Holding[]
-  updatedAt     DateTime  @updatedAt
+  snapshots     PortfolioSnapshot[]
+  updatedAt     DateTime            @updatedAt
 }
 
 model Holding {
@@ -57,4 +58,17 @@ model Trade {
   total     Float
   reason    String
   createdAt DateTime @default(now())
+}
+
+model PortfolioSnapshot {
+  id            String    @id @default(cuid())
+  portfolioId   String
+  portfolio     Portfolio @relation(fields: [portfolioId], references: [id])
+  date          String    // "2026-02-10" 格式，每天一条
+  totalAssets   Float
+  cashBalance   Float
+  holdingsValue Float
+  createdAt     DateTime  @default(now())
+
+  @@unique([portfolioId, date])
 }

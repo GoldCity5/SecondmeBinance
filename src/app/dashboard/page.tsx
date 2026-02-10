@@ -5,6 +5,7 @@ import { getCoinPrices } from "@/lib/binance";
 import { HoldingInfo } from "@/types";
 import PortfolioChart from "@/components/trader/PortfolioChart";
 import TradeHistory from "@/components/trader/TradeHistory";
+import EquityCurve from "@/components/trader/EquityCurve";
 import AutoRefresh from "@/components/common/AutoRefresh";
 
 export const dynamic = "force-dynamic";
@@ -63,7 +64,9 @@ export default async function DashboardPage() {
         {user.name} 的 AI 交易面板
       </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <EquityCurve userId={session.userId} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
           <h2 className="text-lg font-semibold mb-4">持仓概览</h2>
           <PortfolioChart

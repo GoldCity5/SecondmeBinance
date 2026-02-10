@@ -70,3 +70,12 @@ export interface UserSession {
   name: string;
   avatar: string | null;
 }
+
+// 收益快照
+export interface SnapshotPoint {
+  date: string;
+  totalAssets: number;
+  profitLoss: number;
+}
+
+export type SnapshotPeriod = "1D" | "1W" | "1M" | "3M" | "ALL";

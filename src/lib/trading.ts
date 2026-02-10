@@ -1,7 +1,8 @@
 import { prisma } from "./prisma";
-import { getTopCoins, getCoinPrice } from "./binance";
+import { getTopCoins, getCoinPrice, getCoinPrices } from "./binance";
 import { CoinTicker, TradeDecision } from "@/types";
 import { getTradeDecision, refreshToken, getUserShades, getUserSoftMemory } from "./secondme";
+import { createSnapshotForAllUsers } from "./snapshot";
 
 const CONCURRENCY = 5; // 最大并发用户数
 
@@ -229,6 +230,28 @@ export async function executeTradeForAllUsers() {
 
   const tasks = users.map((u) => () => executeTradeForUser(u.id, coins));
   const tradeResults = await parallelLimit(tasks, CONCURRENCY);
+
+  // 交易完成后，为所有用户创建当日快照
+  try {
+    const allSymbols = [...new Set(coins.map((c) => c.symbol))];
+    const holdingSymbols = await prisma.holding.findMany({
+      select: { symbol: true },
+      distinct: ["symbol"],
+    });
+    const extraSymbols = holdingSymbols
+      .map((h) => h.symbol)
+      .filter((s) => !allSymbols.includes(s));
+    const allPrices: Record<string, number> = {};
+    for (const c of coins) allPrices[c.symbol] = c.price;
+    if (extraSymbols.length > 0) {
+      const extra = await getCoinPrices(extraSymbols);
+      Object.assign(allPrices, extra);
+    }
+    await createSnapshotForAllUsers(allPrices);
+    console.log("[快照] 已为所有用户创建当日快照");
+  } catch (err) {
+    console.error("[快照] 创建快照失败:", err);
+  }
 
   return {
     total: users.length,
