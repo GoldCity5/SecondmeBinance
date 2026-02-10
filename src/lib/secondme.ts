@@ -116,28 +116,28 @@ export interface PersonalityProfile {
 export async function getTradeDecision(
   accessToken: string,
   marketData: string,
-  personality?: PersonalityProfile
+  personality?: PersonalityProfile,
+  stylePersona?: string
 ): Promise<TradeDecision[]> {
+  // 流派人设（优先级最高）
+  const styleHint = stylePersona
+    ? `\n\n【你的交易流派】\n${stylePersona}\n请严格按照此流派风格做出交易决策和内心独白。`
+    : "";
+
   // 根据个性化数据生成投资风格引导
   let personalityHint = "";
   if (personality) {
     const parts: string[] = [];
-    if (personality.bio) {
-      parts.push(`你的身份简介: ${personality.bio}`);
-    }
-    if (personality.shades.length > 0) {
-      parts.push(`你的兴趣标签: ${personality.shades.join("、")}`);
-    }
-    if (personality.memories.length > 0) {
-      parts.push(`你的记忆片段: ${personality.memories.join("；")}`);
-    }
+    if (personality.bio) parts.push(`你的身份简介: ${personality.bio}`);
+    if (personality.shades.length > 0) parts.push(`你的兴趣标签: ${personality.shades.join("、")}`);
+    if (personality.memories.length > 0) parts.push(`你的记忆片段: ${personality.memories.join("；")}`);
     if (parts.length > 0) {
-      personalityHint = `\n\n【你的个性档案】\n${parts.join("\n")}\n请根据你的性格特征和兴趣偏好形成独特的投资风格。例如：偏技术的人可能更关注链上数据，保守的人倾向于小额分散，冒险者敢于重仓单一币种。让你的交易决策体现你的个人特色。`;
+      personalityHint = `\n\n【你的个性档案】\n${parts.join("\n")}\n请结合你的个性特征来丰富你的交易风格。`;
     }
   }
 
   const actionControl = `仅输出合法 JSON 数组，不要解释。
-输出结构：[{"action": "BUY"|"SELL"|"HOLD", "symbol": "BTCUSDT", "percentage": 0-100, "reason": "简短理由"}]
+输出结构：[{"action": "BUY"|"SELL"|"HOLD", "symbol": "BTCUSDT", "percentage": 0-100, "reason": "简短理由", "monologue": "内心独白"}]
 你是一个虚拟货币交易AI，根据当前市场行情数据做出交易决策。
 规则：
 1. action 只能是 BUY、SELL 或 HOLD
@@ -146,7 +146,8 @@ export async function getTradeDecision(
 4. HOLD 表示不操作
 5. 每次最多输出 3 个交易决策
 6. reason 用中文简短说明理由
-7. 信息不足时返回 [{"action": "HOLD", "symbol": "BTCUSDT", "percentage": 0, "reason": "信息不足，观望"}]${personalityHint}`;
+7. monologue 是你的内心独白，用你的性格风格写一句话（20字以内），表达对这次决策的真实想法，要有趣、有个性
+8. 信息不足时返回 [{"action": "HOLD", "symbol": "BTCUSDT", "percentage": 0, "reason": "信息不足，观望", "monologue": "再看看再说"}]${styleHint}${personalityHint}`;
 
   const res = await fetch(`${API_BASE}/api/secondme/act/stream`, {
     method: "POST",

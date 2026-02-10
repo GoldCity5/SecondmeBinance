@@ -49,6 +49,7 @@ export async function GET(
       data: {
         name: user.name,
         avatar: user.avatar,
+        tradingStyle: user.tradingStyle || "",
         cashBalance,
         totalAssets: cashBalance + holdingsValue,
         profitLoss: cashBalance + holdingsValue - 100000,
@@ -61,6 +62,7 @@ export async function GET(
           price: t.price,
           total: t.total,
           reason: t.reason,
+          monologue: t.monologue,
           createdAt: t.createdAt.toISOString(),
         })),
       },

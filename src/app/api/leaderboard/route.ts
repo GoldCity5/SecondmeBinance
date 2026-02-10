@@ -43,6 +43,7 @@ export async function GET() {
         userId: user.id,
         name: user.name,
         avatar: user.avatar,
+        tradingStyle: user.tradingStyle || "",
         totalAssets,
         profitLoss,
         profitLossPercent,

@@ -17,6 +17,7 @@ export interface LeaderboardEntry {
   userId: string;
   name: string;
   avatar: string | null;
+  tradingStyle: string;
   totalAssets: number;
   profitLoss: number;
   profitLossPercent: number;
@@ -41,6 +42,7 @@ export interface TradeRecord {
   price: number;
   total: number;
   reason: string;
+  monologue: string;
   createdAt: string;
 }
 
@@ -49,6 +51,7 @@ export interface TradeDecision {
   symbol: string;
   percentage: number;
   reason: string;
+  monologue?: string;
 }
 
 export interface SecondMeUser {

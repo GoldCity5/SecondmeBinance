@@ -41,6 +41,11 @@ export default function TradeHistory({ trades }: Props) {
           <p className="text-xs text-gray-500 mt-1">
             {trade.reason}
           </p>
+          {trade.monologue && (
+            <p className="text-xs text-gray-400 italic mt-1">
+              &ldquo;{trade.monologue}&rdquo;
+            </p>
+          )}
         </div>
       ))}
     </div>

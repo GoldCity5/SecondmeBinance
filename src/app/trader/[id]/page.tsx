@@ -5,6 +5,7 @@ import { HoldingInfo } from "@/types";
 import PortfolioChart from "@/components/trader/PortfolioChart";
 import TradeHistory from "@/components/trader/TradeHistory";
 import EquityCurve from "@/components/trader/EquityCurve";
+import AiMonologue from "@/components/trader/AiMonologue";
 import AutoRefresh from "@/components/common/AutoRefresh";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,8 @@ export default async function TraderPage({ params }: Props) {
   const totalAssets = user.portfolio.cashBalance + holdingsValue;
   const profitLoss = totalAssets - 100000;
 
+  const latestWithMonologue = user.trades.find((t) => t.monologue);
+
   const trades = user.trades.map((t) => ({
     id: t.id,
     symbol: t.symbol,
@@ -56,6 +59,7 @@ export default async function TraderPage({ params }: Props) {
     price: t.price,
     total: t.total,
     reason: t.reason,
+    monologue: t.monologue,
     createdAt: t.createdAt.toISOString(),
   }));
 
@@ -71,7 +75,15 @@ export default async function TraderPage({ params }: Props) {
         <h1 className="text-2xl font-bold">{user.name} 的 AI 交易员</h1>
       </div>
 
-      <EquityCurve userId={id} />
+      <AiMonologue
+        tradingStyle={user.tradingStyle}
+        monologue={latestWithMonologue?.monologue || null}
+        monologueTime={latestWithMonologue?.createdAt.toISOString() || null}
+      />
+
+      <div className="mt-6">
+        <EquityCurve userId={id} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">

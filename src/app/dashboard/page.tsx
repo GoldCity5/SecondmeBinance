@@ -6,6 +6,7 @@ import { HoldingInfo } from "@/types";
 import PortfolioChart from "@/components/trader/PortfolioChart";
 import TradeHistory from "@/components/trader/TradeHistory";
 import EquityCurve from "@/components/trader/EquityCurve";
+import AiMonologue from "@/components/trader/AiMonologue";
 import AutoRefresh from "@/components/common/AutoRefresh";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,9 @@ export default async function DashboardPage() {
   const totalAssets = user.portfolio.cashBalance + holdingsValue;
   const profitLoss = totalAssets - 100000;
 
+  // 取最新一条有独白的交易
+  const latestWithMonologue = user.trades.find((t) => t.monologue);
+
   const trades = user.trades.map((t) => ({
     id: t.id,
     symbol: t.symbol,
@@ -54,6 +58,7 @@ export default async function DashboardPage() {
     price: t.price,
     total: t.total,
     reason: t.reason,
+    monologue: t.monologue,
     createdAt: t.createdAt.toISOString(),
   }));
 
@@ -64,7 +69,16 @@ export default async function DashboardPage() {
         {user.name} 的 AI 交易面板
       </h1>
 
-      <EquityCurve userId={session.userId} />
+      <AiMonologue
+        tradingStyle={user.tradingStyle}
+        monologue={latestWithMonologue?.monologue || null}
+        monologueTime={latestWithMonologue?.createdAt.toISOString() || null}
+        editable
+      />
+
+      <div className="mt-6">
+        <EquityCurve userId={session.userId} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">

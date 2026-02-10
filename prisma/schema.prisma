@@ -16,6 +16,7 @@ model User {
   email           String?
   avatar          String?
   bio             String     @default("")
+  tradingStyle    String     @default("")
   accessToken     String
   refreshToken    String
   tokenExpiresAt  DateTime
@@ -57,6 +58,7 @@ model Trade {
   price     Float
   total     Float
   reason    String
+  monologue String   @default("")
   createdAt DateTime @default(now())
 }
 

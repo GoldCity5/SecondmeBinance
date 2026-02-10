@@ -4,6 +4,13 @@ import { LeaderboardEntry } from "@/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+const STYLE_LABELS: Record<string, { emoji: string; name: string }> = {
+  "yolo-king": { emoji: "\uD83D\uDD25", name: "梭哈之王" },
+  "zen-monk": { emoji: "\uD83E\uDDD8", name: "定投老僧" },
+  "news-hawk": { emoji: "\uD83D\uDCE1", name: "消息面大师" },
+  "contrarian": { emoji: "\uD83D\uDD04", name: "反向指标" },
+};
+
 function formatMoney(n: number | null | undefined): string {
   return (n ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -72,6 +79,11 @@ export default function LeaderboardTable() {
                     <div className="w-6 h-6 rounded-full bg-gray-700" />
                   )}
                   <span className="font-medium">{entry.name}</span>
+                  {entry.tradingStyle && STYLE_LABELS[entry.tradingStyle] && (
+                    <span className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">
+                      {STYLE_LABELS[entry.tradingStyle].emoji} {STYLE_LABELS[entry.tradingStyle].name}
+                    </span>
+                  )}
                 </Link>
               </td>
               <td className="py-3 px-2 text-right font-mono">${formatMoney(entry.totalAssets)}</td>
