@@ -24,7 +24,7 @@ export async function GET() {
       ? await getCoinPrices([...allSymbols])
       : {};
 
-    const initialFund = parseFloat(process.env.INITIAL_FUND || "100000");
+    const initialFund = Number(process.env.INITIAL_FUND) || 100000;
 
     const entries: LeaderboardEntry[] = users.map((user) => {
       const cash = user.portfolio?.cashBalance || 0;

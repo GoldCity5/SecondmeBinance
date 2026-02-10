@@ -4,8 +4,8 @@ import { LeaderboardEntry } from "@/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-function formatMoney(n: number): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function formatMoney(n: number | null | undefined): string {
+  return (n ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function LeaderboardTable() {
@@ -75,11 +75,11 @@ export default function LeaderboardTable() {
                 </Link>
               </td>
               <td className="py-3 px-2 text-right font-mono">${formatMoney(entry.totalAssets)}</td>
-              <td className={`py-3 px-2 text-right font-mono ${entry.profitLoss >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {entry.profitLoss >= 0 ? "+" : ""}${formatMoney(entry.profitLoss)}
+              <td className={`py-3 px-2 text-right font-mono ${(entry.profitLoss ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {(entry.profitLoss ?? 0) >= 0 ? "+" : ""}${formatMoney(entry.profitLoss)}
               </td>
-              <td className={`py-3 px-2 text-right font-mono ${entry.profitLossPercent >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {entry.profitLossPercent >= 0 ? "+" : ""}{entry.profitLossPercent.toFixed(2)}%
+              <td className={`py-3 px-2 text-right font-mono ${(entry.profitLossPercent ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {(entry.profitLossPercent ?? 0) >= 0 ? "+" : ""}{(entry.profitLossPercent ?? 0).toFixed(2)}%
               </td>
               <td className="py-3 px-2 text-right text-gray-400">{entry.holdingsCount}</td>
             </tr>
