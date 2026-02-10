@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCoinPrices } from "@/lib/binance";
+import { calcLeveragedValue } from "@/lib/leverage";
 import { HoldingInfo } from "@/types";
 import PortfolioChart from "@/components/trader/PortfolioChart";
 import TradeHistory from "@/components/trader/TradeHistory";
@@ -30,9 +31,11 @@ export default async function TraderPage({ params }: Props) {
   const symbols = user.portfolio.holdings.map((h) => h.symbol);
   const prices = symbols.length > 0 ? await getCoinPrices(symbols) : {};
 
+  const isLiquidated = !!user.portfolio.liquidatedAt;
+
   const holdings: HoldingInfo[] = user.portfolio.holdings.map((h) => {
     const currentPrice = prices[h.symbol] || 0;
-    const marketValue = h.quantity * currentPrice;
+    const marketValue = calcLeveragedValue(h.quantity, h.avgCost, currentPrice, h.leverage);
     const costValue = h.quantity * h.avgCost;
     return {
       symbol: h.symbol,
@@ -42,11 +45,12 @@ export default async function TraderPage({ params }: Props) {
       marketValue,
       profitLoss: marketValue - costValue,
       profitLossPercent: costValue > 0 ? ((marketValue - costValue) / costValue) * 100 : 0,
+      leverage: h.leverage,
     };
   });
 
   const holdingsValue = holdings.reduce((sum, h) => sum + h.marketValue, 0);
-  const totalAssets = user.portfolio.cashBalance + holdingsValue;
+  const totalAssets = isLiquidated ? 0 : user.portfolio.cashBalance + holdingsValue;
   const profitLoss = totalAssets - 100000;
 
   const latestWithMonologue = user.trades.find((t) => t.monologue);
@@ -58,6 +62,7 @@ export default async function TraderPage({ params }: Props) {
     quantity: t.quantity,
     price: t.price,
     total: t.total,
+    leverage: t.leverage,
     reason: t.reason,
     monologue: t.monologue,
     createdAt: t.createdAt.toISOString(),
@@ -74,6 +79,13 @@ export default async function TraderPage({ params }: Props) {
         )}
         <h1 className="text-2xl font-bold">{user.name} 的 AI 交易员</h1>
       </div>
+
+      {isLiquidated && (
+        <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 mb-4 text-center">
+          <p className="text-red-400 font-bold text-lg">已爆仓</p>
+          <p className="text-red-400/70 text-sm mt-1">该 AI 交易员因杠杆亏损过大，总资产已归零</p>
+        </div>
+      )}
 
       <AiMonologue
         tradingStyle={user.tradingStyle}

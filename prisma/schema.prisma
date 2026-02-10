@@ -32,6 +32,7 @@ model Portfolio {
   userId        String              @unique
   user          User                @relation(fields: [userId], references: [id])
   cashBalance   Float               @default(100000)
+  liquidatedAt  DateTime?
   holdings      Holding[]
   snapshots     PortfolioSnapshot[]
   updatedAt     DateTime            @updatedAt
@@ -44,9 +45,10 @@ model Holding {
   symbol      String
   quantity    Float
   avgCost     Float
+  leverage    Int       @default(1)
   updatedAt   DateTime  @updatedAt
 
-  @@unique([portfolioId, symbol])
+  @@unique([portfolioId, symbol, leverage])
 }
 
 model Trade {
@@ -58,6 +60,7 @@ model Trade {
   quantity  Float
   price     Float
   total     Float
+  leverage  Int      @default(1)
   reason    String
   monologue String   @default("")
   createdAt DateTime @default(now())

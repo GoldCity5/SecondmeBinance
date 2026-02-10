@@ -137,7 +137,7 @@ export async function getTradeDecision(
   }
 
   const actionControl = `仅输出合法 JSON 数组，不要解释。
-输出结构：[{"action": "BUY"|"SELL"|"HOLD", "symbol": "BTCUSDT", "percentage": 0-100, "reason": "简短理由", "monologue": "内心独白"}]
+输出结构：[{"action": "BUY"|"SELL"|"HOLD", "symbol": "BTCUSDT", "percentage": 0-100, "leverage": 1-10, "reason": "简短理由", "monologue": "内心独白"}]
 你是一个虚拟货币交易AI，根据当前市场行情数据做出交易决策。
 规则：
 1. action 只能是 BUY、SELL 或 HOLD
@@ -147,7 +147,9 @@ export async function getTradeDecision(
 5. 每次最多输出 3 个交易决策
 6. reason 用中文简短说明理由
 7. monologue 是你的内心独白，用你的性格风格写一句话（20字以内），表达对这次决策的真实想法，要有趣、有个性
-8. 信息不足时返回 [{"action": "HOLD", "symbol": "BTCUSDT", "percentage": 0, "reason": "信息不足，观望", "monologue": "再看看再说"}]${styleHint}${personalityHint}`;
+8. leverage 是杠杆倍数（1-10 整数），仅 BUY 时需要，表示用多大的杠杆开仓。1=无杠杆，10=最高杠杆。杠杆越高收益和亏损都会被放大，总资产归零会爆仓
+9. SELL 和 HOLD 时不需要 leverage 字段
+10. 信息不足时返回 [{"action": "HOLD", "symbol": "BTCUSDT", "percentage": 0, "reason": "信息不足，观望", "monologue": "再看看再说"}]${styleHint}${personalityHint}`;
 
   const res = await fetch(`${API_BASE}/api/secondme/act/stream`, {
     method: "POST",
@@ -191,7 +193,12 @@ export async function getTradeDecision(
   console.log("[Act API] 清理后内容:", content);
 
   try {
-    const decisions = JSON.parse(content) as TradeDecision[];
+    const raw = JSON.parse(content) as TradeDecision[];
+    // 清洗 leverage 字段：clamp 到 [1, 10]，非数字默认 1
+    const decisions = raw.map((d) => ({
+      ...d,
+      leverage: d.leverage ? Math.max(1, Math.min(10, Math.round(Number(d.leverage) || 1))) : 1,
+    }));
     console.log("[Act API] 解析决策:", JSON.stringify(decisions));
     return decisions;
   } catch {

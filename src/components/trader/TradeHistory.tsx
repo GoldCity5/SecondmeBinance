@@ -29,6 +29,11 @@ export default function TradeHistory({ trades }: Props) {
                 {trade.side === "BUY" ? "买入" : "卖出"}
               </span>
               <span className="font-medium">{trade.symbol.replace("USDT", "")}</span>
+              {trade.leverage > 1 && (
+                <span className="text-xs bg-amber-900/50 text-amber-400 px-1.5 py-0.5 rounded">
+                  {trade.leverage}x
+                </span>
+              )}
             </div>
             <span className="text-xs text-gray-500">
               {new Date(trade.createdAt).toLocaleString("zh-CN")}

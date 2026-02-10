@@ -79,7 +79,12 @@ export default function LeaderboardTable() {
                     <div className="w-6 h-6 rounded-full bg-gray-700" />
                   )}
                   <span className="font-medium">{entry.name}</span>
-                  {entry.tradingStyle && STYLE_LABELS[entry.tradingStyle] && (
+                  {entry.isLiquidated && (
+                    <span className="text-xs bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded">
+                      已爆仓
+                    </span>
+                  )}
+                  {!entry.isLiquidated && entry.tradingStyle && STYLE_LABELS[entry.tradingStyle] && (
                     <span className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">
                       {STYLE_LABELS[entry.tradingStyle].emoji} {STYLE_LABELS[entry.tradingStyle].name}
                     </span>

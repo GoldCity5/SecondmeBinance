@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCoinPrices } from "@/lib/binance";
+import { calcLeveragedValue } from "@/lib/leverage";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +27,11 @@ export async function GET(
     const symbols = user.portfolio?.holdings.map((h) => h.symbol) || [];
     const prices = symbols.length > 0 ? await getCoinPrices(symbols) : {};
 
+    const isLiquidated = !!user.portfolio?.liquidatedAt;
+
     const holdings = (user.portfolio?.holdings || []).map((h) => {
       const currentPrice = prices[h.symbol] || 0;
-      const marketValue = h.quantity * currentPrice;
+      const marketValue = calcLeveragedValue(h.quantity, h.avgCost, currentPrice, h.leverage);
       const costValue = h.quantity * h.avgCost;
       return {
         symbol: h.symbol,
@@ -38,11 +41,13 @@ export async function GET(
         marketValue,
         profitLoss: marketValue - costValue,
         profitLossPercent: costValue > 0 ? ((marketValue - costValue) / costValue) * 100 : 0,
+        leverage: h.leverage,
       };
     });
 
     const holdingsValue = holdings.reduce((sum, h) => sum + h.marketValue, 0);
     const cashBalance = user.portfolio?.cashBalance || 0;
+    const totalAssets = isLiquidated ? 0 : cashBalance + holdingsValue;
 
     return NextResponse.json({
       code: 0,
@@ -50,9 +55,10 @@ export async function GET(
         name: user.name,
         avatar: user.avatar,
         tradingStyle: user.tradingStyle || "",
+        isLiquidated,
         cashBalance,
-        totalAssets: cashBalance + holdingsValue,
-        profitLoss: cashBalance + holdingsValue - 100000,
+        totalAssets,
+        profitLoss: totalAssets - 100000,
         holdings,
         trades: user.trades.map((t) => ({
           id: t.id,
@@ -61,6 +67,7 @@ export async function GET(
           quantity: t.quantity,
           price: t.price,
           total: t.total,
+          leverage: t.leverage,
           reason: t.reason,
           monologue: t.monologue,
           createdAt: t.createdAt.toISOString(),

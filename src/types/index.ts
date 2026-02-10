@@ -22,6 +22,7 @@ export interface LeaderboardEntry {
   profitLoss: number;
   profitLossPercent: number;
   holdingsCount: number;
+  isLiquidated: boolean;
 }
 
 export interface HoldingInfo {
@@ -32,6 +33,7 @@ export interface HoldingInfo {
   marketValue: number;
   profitLoss: number;
   profitLossPercent: number;
+  leverage: number;
 }
 
 export interface TradeRecord {
@@ -41,6 +43,7 @@ export interface TradeRecord {
   quantity: number;
   price: number;
   total: number;
+  leverage: number;
   reason: string;
   monologue: string;
   createdAt: string;
@@ -50,6 +53,7 @@ export interface TradeDecision {
   action: "BUY" | "SELL" | "HOLD";
   symbol: string;
   percentage: number;
+  leverage?: number;
   reason: string;
   monologue?: string;
 }

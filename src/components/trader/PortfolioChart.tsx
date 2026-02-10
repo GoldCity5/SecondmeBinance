@@ -45,9 +45,16 @@ export default function PortfolioChart({ cashBalance, holdings, totalAssets, pro
       {holdings.length > 0 ? (
         <div className="space-y-2">
           {holdings.map((h) => (
-            <div key={h.symbol} className="bg-gray-800/50 rounded-lg p-3 flex items-center justify-between">
+            <div key={`${h.symbol}-${h.leverage}`} className="bg-gray-800/50 rounded-lg p-3 flex items-center justify-between">
               <div>
-                <p className="font-medium">{h.symbol.replace("USDT", "")}</p>
+                <p className="font-medium">
+                  {h.symbol.replace("USDT", "")}
+                  {h.leverage > 1 && (
+                    <span className="ml-1.5 text-xs bg-amber-900/50 text-amber-400 px-1.5 py-0.5 rounded">
+                      {h.leverage}x
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-gray-500">
                   {h.quantity.toFixed(6)} 个 | 均价 ${formatMoney(h.avgCost)}
                 </p>

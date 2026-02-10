@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { getCoinPrices } from "./binance";
+import { calcLeveragedValue } from "./leverage";
 
 /** 获取当天日期字符串 "YYYY-MM-DD" */
 function getTodayDate(): string {
@@ -22,7 +23,7 @@ export async function createSnapshotForUser(
 
   const holdingsValue = portfolio.holdings.reduce((sum, h) => {
     const price = prices[h.symbol] || 0;
-    return sum + h.quantity * price;
+    return sum + calcLeveragedValue(h.quantity, h.avgCost, price, h.leverage);
   }, 0);
 
   const totalAssets = portfolio.cashBalance + holdingsValue;
@@ -60,7 +61,7 @@ export async function createSnapshotForAllUsers(
     portfolios.map(async (portfolio) => {
       const holdingsValue = portfolio.holdings.reduce((sum, h) => {
         const price = prices[h.symbol] || 0;
-        return sum + h.quantity * price;
+        return sum + calcLeveragedValue(h.quantity, h.avgCost, price, h.leverage);
       }, 0);
       const totalAssets = portfolio.cashBalance + holdingsValue;
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCoinPrices } from "@/lib/binance";
+import { calcLeveragedValue } from "@/lib/leverage";
 import { LeaderboardEntry } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -28,13 +29,14 @@ export async function GET() {
 
     const entries: LeaderboardEntry[] = users.map((user) => {
       const cash = user.portfolio?.cashBalance || 0;
+      const isLiquidated = !!user.portfolio?.liquidatedAt;
       let holdingsValue = 0;
 
       for (const h of user.portfolio?.holdings || []) {
-        holdingsValue += h.quantity * (prices[h.symbol] || 0);
+        holdingsValue += calcLeveragedValue(h.quantity, h.avgCost, prices[h.symbol] || 0, h.leverage);
       }
 
-      const totalAssets = cash + holdingsValue;
+      const totalAssets = isLiquidated ? 0 : cash + holdingsValue;
       const profitLoss = totalAssets - initialFund;
       const profitLossPercent = (profitLoss / initialFund) * 100;
 
@@ -48,6 +50,7 @@ export async function GET() {
         profitLoss,
         profitLossPercent,
         holdingsCount: user.portfolio?.holdings.length || 0,
+        isLiquidated,
       };
     });
 

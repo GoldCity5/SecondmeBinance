@@ -5,13 +5,14 @@ import { getTradeDecision, refreshToken, getUserShades, getUserSoftMemory } from
 import { createSnapshotForAllUsers } from "./snapshot";
 import { executeSingleTrade } from "./trade-executor";
 import { matchStyle, getStyleById } from "./styles";
+import { calcLeveragedValue, checkAndLiquidate } from "./leverage";
 
 const CONCURRENCY = 5;
 
 export interface TradeResult {
   userId: string;
   userName: string;
-  status: "success" | "error" | "no_trade";
+  status: "success" | "error" | "no_trade" | "liquidated";
   decisions: TradeDecision[];
   executedTrades: number;
   error?: string;
@@ -44,6 +45,12 @@ export async function executeTradeForUser(userId: string, sharedCoins?: CoinTick
 
   if (!user || !user.portfolio) {
     return { userId, userName: "unknown", status: "error", decisions: [], executedTrades: 0, error: "用户或投资组合不存在" };
+  }
+
+  // 已爆仓用户跳过交易
+  if (user.portfolio.liquidatedAt) {
+    console.log(`[交易] 用户 ${user.name}: 已爆仓，跳过`);
+    return { userId, userName: user.name, status: "liquidated", decisions: [], executedTrades: 0 };
   }
 
   const result: TradeResult = { userId, userName: user.name, status: "no_trade", decisions: [], executedTrades: 0 };
@@ -95,7 +102,10 @@ export async function executeTradeForUser(userId: string, sharedCoins?: CoinTick
   }
 
   const holdingsInfo = user.portfolio.holdings
-    .map((h) => `${h.symbol}: 持有 ${h.quantity} 个, 均价 $${h.avgCost.toFixed(2)}`)
+    .map((h) => {
+      const lev = h.leverage > 1 ? ` (${h.leverage}x杠杆)` : "";
+      return `${h.symbol}: 持有 ${h.quantity} 个, 均价 $${h.avgCost.toFixed(2)}${lev}`;
+    })
     .join("; ");
 
   const marketSummary = `当前时间: ${new Date().toISOString()}
@@ -136,6 +146,17 @@ ${coins.map((c) => `${c.name}: $${c.price} (24h ${c.priceChangePercent >= 0 ? "+
 
   if (result.executedTrades === 0 && result.status !== "error") {
     result.status = "no_trade";
+  }
+
+  // 交易后检查爆仓
+  if (result.executedTrades > 0) {
+    const prices: Record<string, number> = {};
+    for (const c of coins) prices[c.symbol] = c.price;
+    const liquidated = await checkAndLiquidate(user.portfolio.id, prices);
+    if (liquidated) {
+      console.log(`[交易] 用户 ${user.name}: 交易后触发爆仓！`);
+      result.status = "liquidated";
+    }
   }
 
   return result;
