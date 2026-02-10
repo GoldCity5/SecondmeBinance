@@ -12,6 +12,7 @@ const STYLE_INFO: Record<string, { name: string; emoji: string }> = {
 
 interface Props {
   tradingStyle: string;
+  customPersona: string;
   monologue: string | null;
   monologueTime: string | null;
   editable?: boolean;
@@ -27,20 +28,48 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hours / 24)}天前`;
 }
 
-export default function AiMonologue({ tradingStyle, monologue, monologueTime, editable }: Props) {
+export default function AiMonologue({ tradingStyle, customPersona: initCustom, monologue, monologueTime, editable }: Props) {
   const [style, setStyle] = useState(tradingStyle);
+  const [custom, setCustom] = useState(initCustom);
+  const isCustom = custom.length > 0;
   const info = STYLE_INFO[style] || { name: "未知", emoji: "\uD83E\uDD16" };
+
+  function handleSwitch(newStyle: string, newCustom: string) {
+    setStyle(newStyle);
+    setCustom(newCustom);
+  }
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{info.emoji}</span>
-          <span className="font-semibold">{info.name}</span>
+          {isCustom ? (
+            <>
+              <span className="text-lg">{"\uD83C\uDFAD"}</span>
+              <span className="font-semibold">自定义人设</span>
+            </>
+          ) : (
+            <>
+              <span className="text-lg">{info.emoji}</span>
+              <span className="font-semibold">{info.name}</span>
+            </>
+          )}
           <span className="text-xs text-gray-500">· 内心独白</span>
         </div>
-        {editable && <StyleSwitcher currentStyle={style} onSwitch={setStyle} />}
+        {editable && (
+          <StyleSwitcher
+            currentStyle={style}
+            customPersona={custom}
+            onSwitch={handleSwitch}
+          />
+        )}
       </div>
+
+      {isCustom && (
+        <p className="text-xs text-gray-500 mb-2 border-l-2 border-cyan-700 pl-2">
+          {custom}
+        </p>
+      )}
 
       {monologue ? (
         <div>

@@ -71,6 +71,7 @@ export default async function DashboardPage() {
 
       <AiMonologue
         tradingStyle={user.tradingStyle}
+        customPersona={user.customPersona}
         monologue={latestWithMonologue?.monologue || null}
         monologueTime={latestWithMonologue?.createdAt.toISOString() || null}
         editable

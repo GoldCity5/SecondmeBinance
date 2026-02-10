@@ -77,6 +77,7 @@ export default async function TraderPage({ params }: Props) {
 
       <AiMonologue
         tradingStyle={user.tradingStyle}
+        customPersona={user.customPersona}
         monologue={latestWithMonologue?.monologue || null}
         monologueTime={latestWithMonologue?.createdAt.toISOString() || null}
       />

@@ -17,6 +17,7 @@ model User {
   avatar          String?
   bio             String     @default("")
   tradingStyle    String     @default("")
+  customPersona   String     @default("")
   accessToken     String
   refreshToken    String
   tokenExpiresAt  DateTime

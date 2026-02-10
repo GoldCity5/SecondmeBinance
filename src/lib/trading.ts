@@ -80,9 +80,12 @@ export async function executeTradeForUser(userId: string, sharedCoins?: CoinTick
   const personality = { shades, memories, bio: user.bio || "" };
   console.log(`[交易] 用户 ${user.name}: 兴趣标签=${shades.length}个, 记忆=${memories.length}条`);
 
-  // 流派匹配：首次交易时自动分配
+  // 流派：customPersona 优先，否则走预设流派
   let stylePersona: string | undefined;
-  if (!user.tradingStyle) {
+  if (user.customPersona) {
+    stylePersona = user.customPersona;
+    console.log(`[交易] 用户 ${user.name}: 使用自定义人设`);
+  } else if (!user.tradingStyle) {
     const styleId = matchStyle(shades, memories, user.bio || "");
     await prisma.user.update({ where: { id: userId }, data: { tradingStyle: styleId } });
     console.log(`[交易] 用户 ${user.name}: 自动匹配流派 → ${styleId}`);
