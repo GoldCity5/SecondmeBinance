@@ -4,6 +4,7 @@ import { getCoinPrices } from "@/lib/binance";
 import { HoldingInfo } from "@/types";
 import PortfolioChart from "@/components/trader/PortfolioChart";
 import TradeHistory from "@/components/trader/TradeHistory";
+import AutoRefresh from "@/components/common/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export default async function TraderPage({ params }: Props) {
 
   return (
     <div>
+      <AutoRefresh interval={30000} />
       <div className="flex items-center gap-3 mb-6">
         {user.avatar ? (
           <img src={user.avatar} alt="" className="w-10 h-10 rounded-full" />

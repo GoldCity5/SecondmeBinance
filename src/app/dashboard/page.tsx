@@ -5,6 +5,7 @@ import { getCoinPrices } from "@/lib/binance";
 import { HoldingInfo } from "@/types";
 import PortfolioChart from "@/components/trader/PortfolioChart";
 import TradeHistory from "@/components/trader/TradeHistory";
+import AutoRefresh from "@/components/common/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
+      <AutoRefresh interval={30000} />
       <h1 className="text-2xl font-bold mb-6">
         {user.name} 的 AI 交易面板
       </h1>

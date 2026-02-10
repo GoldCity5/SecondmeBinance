@@ -23,7 +23,7 @@ export default function LeaderboardTable() {
       }
     }
     fetchData();
-    const timer = setInterval(fetchData, 60000);
+    const timer = setInterval(fetchData, 30000);
     return () => clearInterval(timer);
   }, []);
 
