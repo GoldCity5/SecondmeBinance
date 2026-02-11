@@ -2,6 +2,7 @@
 
 import { CoinTicker } from "@/types";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Sparkline from "./Sparkline";
 
 function formatPrice(price: number): string {
@@ -94,7 +95,11 @@ export default function PriceTable() {
           {sorted.map((coin, i) => (
             <tr key={coin.symbol} className="border-b border-gray-800/50 hover:bg-gray-900/50">
               <td className="py-3 px-2 text-gray-500">{i + 1}</td>
-              <td className="py-3 px-2 font-medium text-white">{coin.name}</td>
+              <td className="py-3 px-2 font-medium">
+                <Link href={`/market/${coin.symbol}`} className="text-white hover:text-cyan-400 transition">
+                  {coin.name}
+                </Link>
+              </td>
               <td className="py-3 px-2 text-right font-mono">${formatPrice(coin.price)}</td>
               <td className={`py-3 px-2 text-right font-mono ${coin.priceChangePercent >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                 {coin.priceChangePercent >= 0 ? "+" : ""}{coin.priceChangePercent.toFixed(2)}%

@@ -107,3 +107,23 @@ export interface SnapshotPoint {
 }
 
 export type SnapshotPeriod = "1D" | "1W" | "1M" | "3M" | "ALL";
+
+// K 线数据
+export interface KlineBar {
+  time: number; // 开盘时间戳 ms
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface TradeMarker {
+  time: number; // createdAt 时间戳 ms
+  price: number;
+  side: "BUY" | "SELL";
+  type: "AI" | "MANUAL";
+  userName: string;
+}
+
+export type KlineInterval = "1h" | "4h" | "1d" | "1w";

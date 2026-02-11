@@ -1,4 +1,4 @@
-import { CoinTicker } from "@/types";
+import { CoinTicker, KlineBar } from "@/types";
 
 const BASE_URL = process.env.BINANCE_API_BASE || "https://data-api.binance.vision";
 
@@ -90,4 +90,43 @@ export async function getAllKlines(
     }
   }
   return klines;
+}
+
+// 获取单个币种 24h 行情
+export async function get24hTicker(symbol: string): Promise<CoinTicker> {
+  const url = `${BASE_URL}/api/v3/ticker/24hr?symbol=${symbol}`;
+  const res = await fetch(url, { next: { revalidate: 30 } });
+  if (!res.ok) throw new Error(`Binance ticker error: ${res.status}`);
+  const t: BinanceTicker = await res.json();
+  return {
+    symbol: t.symbol,
+    name: t.symbol.replace("USDT", ""),
+    price: parseFloat(t.lastPrice),
+    priceChange: parseFloat(t.priceChange),
+    priceChangePercent: parseFloat(t.priceChangePercent),
+    high24h: parseFloat(t.highPrice),
+    low24h: parseFloat(t.lowPrice),
+    volume: parseFloat(t.volume),
+    quoteVolume: parseFloat(t.quoteVolume),
+  };
+}
+
+// 获取完整 OHLC K 线数据
+export async function getDetailedKlines(
+  symbol: string,
+  interval: string = "1h",
+  limit: number = 100
+): Promise<KlineBar[]> {
+  const url = `${BASE_URL}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+  const res = await fetch(url, { next: { revalidate: 60 } });
+  if (!res.ok) throw new Error(`Binance klines error: ${res.status}`);
+  const data: unknown[][] = await res.json();
+  return data.map((k) => ({
+    time: k[0] as number,
+    open: parseFloat(k[1] as string),
+    high: parseFloat(k[2] as string),
+    low: parseFloat(k[3] as string),
+    close: parseFloat(k[4] as string),
+    volume: parseFloat(k[5] as string),
+  }));
 }
