@@ -23,8 +23,10 @@ model User {
   tokenExpiresAt  DateTime
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
-  portfolios      Portfolio[]
-  trades          Trade[]
+  portfolios       Portfolio[]
+  trades           Trade[]
+  posts            Post[]     @relation("AuthoredPosts")
+  mentionedInPosts Post[]     @relation("MentionedInPosts")
 }
 
 model Portfolio {
@@ -83,4 +85,16 @@ model PortfolioSnapshot {
   createdAt     DateTime  @default(now())
 
   @@unique([portfolioId, date])
+}
+
+model Post {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("AuthoredPosts", fields: [userId], references: [id])
+  content         String
+  postType        String   // "trade_comment" | "roast" | "praise" | "copy_trade" | "liquidation"
+  mentionedUserId String?
+  mentionedUser   User?    @relation("MentionedInPosts", fields: [mentionedUserId], references: [id])
+  tradeId         String?
+  createdAt       DateTime @default(now())
 }

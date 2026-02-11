@@ -19,6 +19,9 @@ export default async function Header() {
           <Link href="/market" className="text-gray-300 hover:text-white transition-colors">
             行情
           </Link>
+          <Link href="/square" className="text-gray-300 hover:text-white transition-colors">
+            广场
+          </Link>
           {session ? (
             <UserNav name={session.name} />
           ) : (

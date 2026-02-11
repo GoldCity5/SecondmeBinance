@@ -3,6 +3,7 @@ import { getTopCoins, getCoinPrices } from "./binance";
 import { CoinTicker, TradeDecision } from "@/types";
 import { getTradeDecision, refreshToken, getUserShades, getUserSoftMemory } from "./secondme";
 import { createSnapshotForAllUsers } from "./snapshot";
+import { generateSocialPosts } from "./social";
 import { executeSingleTrade } from "./trade-executor";
 import { matchStyle, getStyleById } from "./styles";
 import { calcLeveragedValue, checkAndLiquidate } from "./leverage";
@@ -195,6 +196,14 @@ export async function executeTradeForAllUsers() {
     console.log("[快照] 已为所有用户创建当日快照");
   } catch (err) {
     console.error("[快照] 创建快照失败:", err);
+  }
+
+  // 生成 AI 社交动态
+  try {
+    const postCount = await generateSocialPosts();
+    console.log(`[社交] 生成 ${postCount} 条社交动态`);
+  } catch (err) {
+    console.error("[社交] 社交动态生成失败:", err);
   }
 
   return {

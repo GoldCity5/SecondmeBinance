@@ -127,3 +127,17 @@ export interface TradeMarker {
 }
 
 export type KlineInterval = "1h" | "4h" | "1d" | "1w";
+
+// 广场动态
+export interface PostItem {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  tradingStyle: string;
+  content: string;
+  postType: string;
+  mentionedUserName: string | null;
+  mentionedUserId: string | null;
+  createdAt: string;
+}
