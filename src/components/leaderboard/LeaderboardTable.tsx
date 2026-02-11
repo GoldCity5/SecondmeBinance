@@ -13,9 +13,9 @@ const STYLE_LABELS: Record<string, { emoji: string; name: string }> = {
 
 type TabType = "ai" | "manual" | "all";
 const TABS: { label: string; value: TabType }[] = [
+  { label: "全部", value: "all" },
   { label: "AI 交易员", value: "ai" },
   { label: "真人交易", value: "manual" },
-  { label: "全部", value: "all" },
 ];
 
 function formatMoney(n: number | null | undefined): string {
@@ -23,7 +23,7 @@ function formatMoney(n: number | null | undefined): string {
 }
 
 export default function LeaderboardTable() {
-  const [activeTab, setActiveTab] = useState<TabType>("ai");
+  const [activeTab, setActiveTab] = useState<TabType>("all");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,16 +71,31 @@ export default function LeaderboardTable() {
         </div>
       ) : (
         <div className="space-y-3">
-          {entries.map((entry, idx) => (
-            <LeaderboardCard key={`${entry.userId}-${entry.type}-${idx}`} entry={entry} showTypeTag={activeTab === "all"} />
-          ))}
+          {entries.map((entry, idx) => {
+            // "全部"视图：真人排名低于自己的 AI 排名时，标记"不如AI"
+            let worseThanAi = false;
+            if (activeTab === "all" && entry.type === "MANUAL") {
+              const aiEntry = entries.find((e) => e.userId === entry.userId && e.type === "AI");
+              if (aiEntry && entry.rank > aiEntry.rank) {
+                worseThanAi = true;
+              }
+            }
+            return (
+              <LeaderboardCard
+                key={`${entry.userId}-${entry.type}-${idx}`}
+                entry={entry}
+                showTypeTag={activeTab === "all"}
+                worseThanAi={worseThanAi}
+              />
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-function LeaderboardCard({ entry, showTypeTag }: { entry: LeaderboardEntry; showTypeTag: boolean }) {
+function LeaderboardCard({ entry, showTypeTag, worseThanAi }: { entry: LeaderboardEntry; showTypeTag: boolean; worseThanAi: boolean }) {
   const style = STYLE_LABELS[entry.tradingStyle];
   const plPercent = entry.profitLossPercent ?? 0;
   const plColor = plPercent >= 0 ? "text-emerald-400" : "text-red-400";
@@ -114,6 +129,11 @@ function LeaderboardCard({ entry, showTypeTag }: { entry: LeaderboardEntry; show
                       : "bg-purple-900/40 text-purple-400"
                   }`}>
                     {entry.type === "AI" ? "AI" : "真人"}
+                  </span>
+                )}
+                {worseThanAi && (
+                  <span className="text-xs bg-orange-900/40 text-orange-400 px-1.5 py-0.5 rounded">
+                    不如AI
                   </span>
                 )}
                 {entry.isLiquidated && (
