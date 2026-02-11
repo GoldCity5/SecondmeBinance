@@ -15,10 +15,13 @@ function formatVolume(vol: number): string {
   return vol.toLocaleString();
 }
 
+type SortKey = "default" | "changeAsc" | "changeDesc";
+
 export default function PriceTable() {
   const [coins, setCoins] = useState<CoinTicker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("default");
 
   useEffect(() => {
     async function fetchData() {
@@ -54,6 +57,20 @@ export default function PriceTable() {
     return <div className="text-gray-500 text-center py-12">暂无行情数据</div>;
   }
 
+  const sorted = [...coins].sort((a, b) => {
+    if (sortKey === "changeDesc") return b.priceChangePercent - a.priceChangePercent;
+    if (sortKey === "changeAsc") return a.priceChangePercent - b.priceChangePercent;
+    return 0;
+  });
+
+  function cycleSortKey() {
+    setSortKey((prev) =>
+      prev === "default" ? "changeDesc" : prev === "changeDesc" ? "changeAsc" : "default"
+    );
+  }
+
+  const sortIcon = sortKey === "changeDesc" ? "\u2193" : sortKey === "changeAsc" ? "\u2191" : "\u2195";
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -62,7 +79,11 @@ export default function PriceTable() {
             <th className="text-left py-3 px-2">#</th>
             <th className="text-left py-3 px-2">币种</th>
             <th className="text-right py-3 px-2">价格 (USDT)</th>
-            <th className="text-right py-3 px-2">24h 涨跌</th>
+            <th className="text-right py-3 px-2">
+              <button onClick={cycleSortKey} className="hover:text-white transition">
+                24h 涨跌 {sortIcon}
+              </button>
+            </th>
             <th className="text-center py-3 px-2">24h K线</th>
             <th className="text-right py-3 px-2">24h 最高</th>
             <th className="text-right py-3 px-2">24h 最低</th>
@@ -70,7 +91,7 @@ export default function PriceTable() {
           </tr>
         </thead>
         <tbody>
-          {coins.map((coin, i) => (
+          {sorted.map((coin, i) => (
             <tr key={coin.symbol} className="border-b border-gray-800/50 hover:bg-gray-900/50">
               <td className="py-3 px-2 text-gray-500">{i + 1}</td>
               <td className="py-3 px-2 font-medium text-white">{coin.name}</td>
